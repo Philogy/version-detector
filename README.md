@@ -112,13 +112,13 @@ Returns a string representation of the version, can be useful for debugging. (Im
 Version global;`).
 
 ### Huff
-**`GET_VERSION()`**
+#### [`GET_VERSION()`](./src/VersionLib.huff)
 
 Similar to the Solidity `VersionLib.getVersion` function, the `GET_VERSION` macro will retrieve and push the version value as
 a full word onto the stack. It'll deploy any detectors if missing and requires the same create2
 factory to already be deployed on the chain. 
 
-**`GET_VERSION_VIEW()`**
+#### [`GET_VERSION_VIEW()`](./src/VersionLib.huff)
 
 Similar to the Solidity `VersionLib.getVersionView` function, the `GET_VERSION_VIEW` macro will
 check for the detectors and push the version to the stack, it will not deploy missing detector
