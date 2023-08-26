@@ -1,66 +1,76 @@
-## Foundry
+# 🔍 Version Detector
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
+A library for runtime EVM version detection.
 
 ## Usage
 
-### Build
+First install this repo as a dependency into your foundry project:
 
-```shell
-$ forge build
+```bash
+forge install philogy/version-detector --no-commit
 ```
 
-### Test
+### Solidity
 
-```shell
-$ forge test
+In your contract import and then use the library e.g.:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.21;
+
+import {VersionLib, Version} from "version-detector/VersionLib.sol";
+
+contract OnlyShanghai {
+    constructor() {
+        require(VersionLib.getVersion() >= Version.PostShanghai, "Incorrect Version");
+    }
+}
 ```
 
-### Format
+### Huff
 
-```shell
-$ forge fmt
+In your code `#include` the library:
+
+```
+#include "../lib/version-detector/src/VersionLib.huff"
 ```
 
-### Gas Snapshots
+You can then use the `GET_VERSION` macro and version constants (`VERSION_UNKNOWN`, `VERSION_PRE_SHANGHAI` `VERSION_POST_SHANGHAI`):
 
-```shell
-$ forge snapshot
 ```
+#include "../lib/version-detector/src/VersionLib.huff"
 
-### Anvil
+#define table V1_DEFAULT {
+    0x3d
+}
 
-```shell
-$ anvil
-```
+#define table V2_SHANGHAI {
+    0x5f
+}
 
-### Deploy
+#define macro CONSTRUCTOR() = takes(0) returns(0) {
+    GET_VERSION(0x0)
+    [VERSION_POST_SHANGHAI]
+    gt
+    iszero
+    v2 jumpi
+    default:
+        __tablesize(V1_DEFAULT)
+        dup1
+        __tablestart(V1_DEFAULT)
+        0x0
+        codecopy
+        0x0
+        return
+    v2:
+        __tablesize(V2_SHANGHAI)
+        dup1
+        __tablestart(V2_SHANGHAI)
+        0x0
+        codecopy
+        0x0
+        return
+}
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+#define macro MAIN() = takes(0) returns(0) { }
 ```

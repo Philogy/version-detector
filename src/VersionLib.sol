@@ -26,10 +26,10 @@ library VersionLib {
 
     function getVersion() internal returns (Version) {
         _ensureShanghai();
-        return getShanghaiStatus();
+        return getVersionView();
     }
 
-    function getShanghaiStatus() internal view returns (Version) {
+    function getVersionView() internal view returns (Version) {
         if (SHANGHAI_DETECTOR.code.length == 0) return Version.Unknown;
         (bool success,) = SHANGHAI_DETECTOR.staticcall{gas: 2}(new bytes(0));
         return success ? Version.PostShanghai : Version.PreShanghai;

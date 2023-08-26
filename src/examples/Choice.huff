@@ -11,7 +11,8 @@
 #define macro CONSTRUCTOR() = takes(0) returns(0) {
     GET_VERSION(0x0)
     [VERSION_POST_SHANGHAI]
-    eq
+    gt
+    iszero
     v2 jumpi
     default:
         __tablesize(V1_DEFAULT)
