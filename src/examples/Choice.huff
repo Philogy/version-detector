@@ -1,0 +1,34 @@
+#include "../VersionLib.huff"
+
+#define table V1_DEFAULT {
+    0x3d
+}
+
+#define table V2_SHANGHAI {
+    0x5f
+}
+
+#define macro CONSTRUCTOR() = takes(0) returns(0) {
+    GET_VERSION(0x0)
+    [VERSION_POST_SHANGHAI]
+    eq
+    v2 jumpi
+    default:
+        __tablesize(V1_DEFAULT)
+        dup1
+        __tablestart(V1_DEFAULT)
+        0x0
+        codecopy
+        0x0
+        return
+    v2:
+        __tablesize(V2_SHANGHAI)
+        dup1
+        __tablestart(V2_SHANGHAI)
+        0x0
+        codecopy
+        0x0
+        return
+}
+
+#define macro MAIN() = takes(0) returns(0) { }

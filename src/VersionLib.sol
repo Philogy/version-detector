@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import {ICreate2Factory} from "./interfaces/ICreate2Factory.sol";
 
-
 enum Version {
     Unknown,
     PreShanghai,

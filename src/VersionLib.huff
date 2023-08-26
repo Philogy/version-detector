@@ -1,0 +1,92 @@
+// ===================== Factory Constants =====================
+#define constant FACTORY_ADDR = 0x0000000000FFe8B47B3e2130213B802212439497
+#define function safeCreate2(bytes32, bytes) nonpayable returns (address)
+
+// ==================== Shanghai Constants =====================
+#define constant SHANGHAI_ADDR = 0x000000005ea0cBe63A65f3383BFC4541c9520Ab5
+#define constant SHANGHAI_SALT = 0x00000000000000000000000000000000000000001510b57b210380000966a689
+#define constant SHANGHAI_CODE = 0x0a60018060093d393df35f // length + code
+#define constant SHANGHAI_CODE_OFFSET = 0x6a // length + code
+// Size of total `safeCreate2` calldata payload
+#define constant SHANGHAI_DEPLOY_SIZE = 0x6e
+
+// ===================== Other Definitions =====================
+#define error MissingCreate2Factory()
+#define error ShanghaiDetectorDeployFailed()
+
+#define constant VERSION_UNKNOWN = 0x0
+#define constant VERSION_PRE_SHANGHAI = 0x1
+#define constant VERSION_POST_SHANGHAI = 0x2
+
+#define macro GET_VERSION(m1) = takes(0) returns(1) {
+    0x0 0x0 0x0 0x0                  // [0, 0, 0, 0]
+    [SHANGHAI_ADDR] dup1 dup1        // [0, 0, 0, 0, shanghai_addr, shanghai_addr, shanghai_addr]
+    _ENSURE_SHANGHAI_DEPLOYED(<m1>)  // [0, 0, 0, 0, shanghai_addr]
+    0x2                              // [0, 0, 0, 0, shanghai_addr, 2]
+    staticcall                       // [success]
+    [VERSION_PRE_SHANGHAI]           // [success, VERSION_PRE_SHANGHAI]
+    add                              // [version]
+    // returns:                         [version]
+}
+
+#define macro _ENSURE_SHANGHAI_DEPLOYED(m1) = takes(2) returns(0) {
+    extcodesize                    // [shanghai_addr, shanghai_addr.code.length]
+    shanghai_deployed jumpi        // [shanghai_addr]
+        // Shanghai detector not deployed.
+        _CHECK_FACTORY()           // [shanghai_addr, factory_addr]
+        // -- Call `safeCreate2(SHANGHAI_SALT, SHANGHAI_CODE)`
+        __FUNC_SIG(safeCreate2)    // [shanghai_addr, factory_addr, safeCreate2.selector]
+        <m1>                       // [shanghai_addr, factory_addr, safeCreate2.selector, m1]
+        mstore                     // [shanghai_addr, factory_addr]
+        [SHANGHAI_SALT]            // [shanghai_addr, factory_addr, shanghai_salt]
+        <m1> 0x20 add              // [shanghai_addr, factory_addr, shanghai_salt, m1 + 0x20]
+        mstore                     // [shanghai_addr, factory_addr]
+        0x40 dup1                  // [shanghai_addr, factory_addr, 0x40, 0x40]
+        <m1>                       // [shanghai_addr, factory_addr, 0x40, 0x40, m1]
+        add                        // [shanghai_addr, factory_addr, 0x40, m1 + 0x40]
+        mstore                     // [shanghai_addr, factory_addr]
+        [SHANGHAI_CODE]            // [shanghai_addr, factory_addr, shanghai_code]
+        [SHANGHAI_CODE_OFFSET]     // [shanghai_addr, factory_addr, shanghai_code, shanghai_code_offset]
+        <m1>                       // [shanghai_addr, factory_addr, shanghai_code, shanghai_code_offset, m1]
+        add                        // [shanghai_addr, factory_addr, shanghai_code, m1 + shanghai_code_offset]
+        mstore                     // [shanghai_addr, factory_addr]
+        <m1>                       // [shanghai_addr, factory_addr, m1]
+        [SHANGHAI_DEPLOY_SIZE]     // [shanghai_addr, factory_addr, m1, size]
+        <m1> 0x1c add              // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c]
+        0x0                        // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c, 0]
+        0x20                       // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c, 0, 0x20]
+        swap5                      // [shanghai_addr, 0x20        , m1, size, m1 + 0x1c, 0, factory_addr]
+        gas                        // [shanghai_addr, 0x20        , m1, size, m1 + 0x1c, 0, factory_addr, gas]
+        call                       // [shanghai_addr, success]
+        // -- Verify result and success.
+        swap1                      // [success, shanghai_addr]
+        <m1>                       // [success, shanghai_addr, m1]
+        mload                      // [success, shanghai_addr, ret_addr]
+        eq                         // [success, shanghai_addr == ret_addr]
+        and                        // [success && shanghai_addr == ret_addr]
+        shanghai_deployed jumpi    // []
+            __FUNC_SIG(ShanghaiDetectorDeployFailed)
+            //                        [ShanghaiDetectorDeployFailed.selector]
+            _REVERT()              // [] -- end
+    shanghai_deployed:             // []
+    // returns:                       []
+}
+
+#define macro _CHECK_FACTORY() = takes(0) returns(1) {
+    [FACTORY_ADDR] dup1        // [factory_addr, factory_addr]
+    extcodesize                // [factory_addr, factory_addr.code.length]
+    factory_exists jumpi       // [factory_addr]
+        __FUNC_SIG(MissingCreate2Factory)
+        //                        [factory_addr, MissingCreate2Factory.selector]
+        _REVERT()              // [factory_addr] -- end
+    factory_exists:            // [factory_addr]
+}
+
+#define macro _REVERT() = takes(1) returns(0) {
+    // takes:                 [error_selector]
+    0x0                    // [error_selector, 0]
+    mstore                 // []
+    0x04                   // [0x04]
+    0x1c                   // [0x04, 0x1c]
+    revert                 // [] -- end
+}
