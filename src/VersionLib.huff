@@ -18,10 +18,10 @@
 #define constant VERSION_PRE_SHANGHAI = 0x1
 #define constant VERSION_POST_SHANGHAI = 0x2
 
-#define macro GET_VERSION(m1) = takes(0) returns(1) {
+#define macro GET_VERSION() = takes(0) returns(1) {
     0x0 0x0 0x0 0x0                  // [0, 0, 0, 0]
     [SHANGHAI_ADDR] dup1 dup1        // [0, 0, 0, 0, shanghai_addr, shanghai_addr, shanghai_addr]
-    _ENSURE_SHANGHAI_DEPLOYED(<m1>)  // [0, 0, 0, 0, shanghai_addr]
+    _ENSURE_SHANGHAI_DEPLOYED()      // [0, 0, 0, 0, shanghai_addr]
     0x2                              // [0, 0, 0, 0, shanghai_addr, 2]
     staticcall                       // [success]
     [VERSION_PRE_SHANGHAI]           // [success, VERSION_PRE_SHANGHAI]
@@ -29,38 +29,50 @@
     // returns:                         [version]
 }
 
-#define macro _ENSURE_SHANGHAI_DEPLOYED(m1) = takes(2) returns(0) {
+#define macro GET_VERSION_VIEW() = takes(0) returns(1) {
+    0x0 0x0 0x0 0x0                // [0, 0, 0, 0]
+    [SHANGHAI_ADDR] dup1           // [0, 0, 0, 0, shanghai_addr, shanghai_addr]
+    extcodesize                    // [0, 0, 0, 0, shanghai_addr, shanghai_addr.code.length]
+    has_shanghai_detector jumpi    // [0, 0, 0, 0, shanghai_addr]
+        // Detector not deployed but view, so return unknown (0x0).
+        pop pop pop pop            // [0]
+        has_result jump            // [0]
+    has_shanghai_detector:         // [0, 0, 0, 0, shanghai_addr]
+         0x2                       // [0, 0, 0, 0, shanghai_addr, 2]
+         staticcall                // [success]
+         [VERSION_PRE_SHANGHAI]    // [success, VERSION_PRE_SHANGHAI]
+         add                       // [version]
+    has_result:                    // [version]
+}
+
+#define macro _ENSURE_SHANGHAI_DEPLOYED() = takes(2) returns(0) {
     extcodesize                    // [shanghai_addr, shanghai_addr.code.length]
     shanghai_deployed jumpi        // [shanghai_addr]
         // Shanghai detector not deployed.
         _CHECK_FACTORY()           // [shanghai_addr, factory_addr]
         // -- Call `safeCreate2(SHANGHAI_SALT, SHANGHAI_CODE)`
         __FUNC_SIG(safeCreate2)    // [shanghai_addr, factory_addr, safeCreate2.selector]
-        <m1>                       // [shanghai_addr, factory_addr, safeCreate2.selector, m1]
+        0x0                        // [shanghai_addr, factory_addr, safeCreate2.selector, 0x0]
         mstore                     // [shanghai_addr, factory_addr]
         [SHANGHAI_SALT]            // [shanghai_addr, factory_addr, shanghai_salt]
-        <m1> 0x20 add              // [shanghai_addr, factory_addr, shanghai_salt, m1 + 0x20]
+        0x20                       // [shanghai_addr, factory_addr, shanghai_salt, 0x20]
         mstore                     // [shanghai_addr, factory_addr]
         0x40 dup1                  // [shanghai_addr, factory_addr, 0x40, 0x40]
-        <m1>                       // [shanghai_addr, factory_addr, 0x40, 0x40, m1]
-        add                        // [shanghai_addr, factory_addr, 0x40, m1 + 0x40]
         mstore                     // [shanghai_addr, factory_addr]
         [SHANGHAI_CODE]            // [shanghai_addr, factory_addr, shanghai_code]
         [SHANGHAI_CODE_OFFSET]     // [shanghai_addr, factory_addr, shanghai_code, shanghai_code_offset]
-        <m1>                       // [shanghai_addr, factory_addr, shanghai_code, shanghai_code_offset, m1]
-        add                        // [shanghai_addr, factory_addr, shanghai_code, m1 + shanghai_code_offset]
         mstore                     // [shanghai_addr, factory_addr]
-        <m1>                       // [shanghai_addr, factory_addr, m1]
-        [SHANGHAI_DEPLOY_SIZE]     // [shanghai_addr, factory_addr, m1, size]
-        <m1> 0x1c add              // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c]
-        0x0                        // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c, 0]
-        0x20                       // [shanghai_addr, factory_addr, m1, size, m1 + 0x1c, 0, 0x20]
-        swap5                      // [shanghai_addr, 0x20        , m1, size, m1 + 0x1c, 0, factory_addr]
-        gas                        // [shanghai_addr, 0x20        , m1, size, m1 + 0x1c, 0, factory_addr, gas]
+        0x0                        // [shanghai_addr, factory_addr, 0]
+        [SHANGHAI_DEPLOY_SIZE]     // [shanghai_addr, factory_addr, 0, size]
+        0x1c                       // [shanghai_addr, factory_addr, 0, size, 0x1c]
+        0x0                        // [shanghai_addr, factory_addr, 0, size, 0x1c, 0]
+        0x20                       // [shanghai_addr, factory_addr, 0, size, 0x1c, 0, 0x20]
+        swap5                      // [shanghai_addr, 0x20        , 0, size, 0x1c, 0, factory_addr]
+        gas                        // [shanghai_addr, 0x20        , 0, size, 0x1c, 0, factory_addr, gas]
         call                       // [shanghai_addr, success]
         // -- Verify result and success.
         swap1                      // [success, shanghai_addr]
-        <m1>                       // [success, shanghai_addr, m1]
+        0x0                        // [success, shanghai_addr, 0]
         mload                      // [success, shanghai_addr, ret_addr]
         eq                         // [success, shanghai_addr == ret_addr]
         and                        // [success && shanghai_addr == ret_addr]

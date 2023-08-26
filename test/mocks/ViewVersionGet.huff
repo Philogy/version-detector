@@ -1,0 +1,10 @@
+#include "../../src/VersionLib.huff"
+
+#define macro MAIN() = takes(0) returns(0) {
+    GET_VERSION_VIEW()
+    msize
+    mstore
+    msize
+    0x0
+    return
+}

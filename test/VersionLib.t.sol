@@ -3,6 +3,7 @@ pragma solidity 0.8.21;
 
 import {Test} from "forge-std/Test.sol";
 import {VersionLib, Version} from "src/VersionLib.sol";
+import {Shanghai} from "src/detectors/Constants.sol";
 import {console2 as console} from "forge-std/console2.sol";
 import {FACTORY_CODE, FACTORY_ADDR} from "./utils/Create2Constants.sol";
 
@@ -17,14 +18,34 @@ contract VersionLibTest is Test {
     }
 
     function testHuffChoice() public {
-        bytes memory code = getHuffWithVersion("src/examples/Choice.huff", "paris");
-        address deployed;
+        address deployed = deployHuffWithVersion("src/examples/Choice.huff", "paris");
+        emit log_named_bytes("deployed.code", deployed.code);
+    }
+
+    function testViewVersionUnknown() public {
+        address viewVersion = deployHuffWithVersion("test/mocks/ViewVersionGet.huff", "paris");
+        (bool success, bytes memory ret) = viewVersion.staticcall(new bytes(0));
+        assertTrue(success);
+        uint256 v = abi.decode(ret, (uint256));
+        assertEq(v, 0);
+    }
+
+    function testViewVersionKnown() public {
+        address viewVersion = deployHuffWithVersion("test/mocks/ViewVersionGet.huff", "paris");
+        VersionLib.FACTORY.safeCreate2(Shanghai.SALT, Shanghai.CODE);
+        (bool success, bytes memory ret) = viewVersion.staticcall(new bytes(0));
+        assertTrue(success);
+        uint256 v = abi.decode(ret, (uint256));
+        console.log("version: %d", v);
+    }
+
+    function deployHuffWithVersion(string memory file, string memory version) internal returns (address deployed) {
+        bytes memory code = getHuffWithVersion(file, version);
         /// @solidity memory-safe-assembly
         assembly {
             deployed := create(0, add(code, 0x20), mload(code))
         }
         assertTrue(deployed != address(0), "DEPLOY_FAILED");
-        emit log_named_bytes("deployed.code", deployed.code);
     }
 
     function getHuffWithVersion(string memory file, string memory version) internal returns (bytes memory code) {
