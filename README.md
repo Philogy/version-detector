@@ -64,7 +64,7 @@ You can then use the `GET_VERSION` macro and version constants (`VERSION_UNKNOWN
 }
 
 #define macro CONSTRUCTOR() = takes(0) returns(0) {
-    GET_VERSION(0x0)
+    GET_VERSION()
     [VERSION_POST_SHANGHAI]
     gt
     iszero
